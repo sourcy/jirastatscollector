@@ -14,5 +14,13 @@ jira_user=some user
 jira_password=some password
 jira_url=https://jira.yourcompany.com/rest/api/latest/search?
 git_repository=/home/user/development/repo
+## this is a list of epic issue ids.
+# epics=ISSUE-123 or epics=ISSUE-123,ISSUE-124,ISSUE-125
 epics=ISSUE-123
+# epics are implemented as custom fields, so the
+# custom field ID of your epic field will have some auto
+# generated value. the easiest way to find it is to use the advanced
+# issue search, type "epic" and look at the autocomplete popup.
+# you will see "Epic Link - cf[XXXXX] there. this is the thing
+# you're looking for.
 epic_custom_field=cf[10147]
