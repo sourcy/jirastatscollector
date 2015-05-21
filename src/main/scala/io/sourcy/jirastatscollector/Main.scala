@@ -14,7 +14,7 @@ package io.sourcy.jirastatscollector
 
 import java.io.File
 
-import io.sourcy.jirastatscollector.JiraClient.{extractChildIssues, extractSubTasks}
+import io.sourcy.jirastatscollector.JiraClient.extractAllIssues
 
 import scala.sys.process.Process
 
@@ -22,15 +22,13 @@ object Main extends App {
   print(s"\nscanning ${Settings.epics.size} epics...")
 
   private val allIssues = extractAllIssues(Settings.epics)
-  print("log output..")
-  private val gitLogOutput = Process(listChangedFiles(allIssues), new File(Settings.gitRepository)).!!
   print("changed files..")
+  private val gitLogOutput = Process(listChangedFilesCmd(allIssues), new File(Settings.gitRepository)).!!
   private val changedFiles = filterLogOutput(gitLogOutput, line => !line.matches("^.{7} .*")).distinct
   print("commits..")
   private val commits = filterLogOutput(gitLogOutput, line => line.matches("^.{7} .*"))
-  print("diff output..")
-  private val gitDiffOutput = Process(listChangedLines(allIssues), new File(Settings.gitRepository)).!!
   print("changed lines..")
+  private val gitDiffOutput = Process(listChangedLinesCmd(allIssues), new File(Settings.gitRepository)).!!
   private val changedLines = filterLogOutput(gitDiffOutput, line => line.matches("^[\\+\\-] .*"))
   println("done.")
 
@@ -40,18 +38,12 @@ object Main extends App {
   println(s"files changed:    ${changedFiles.size}")
   println(s"lines changed:    ${changedLines.size}")
 
-
-  private def extractAllIssues(epics: Seq[String]): Seq[String] = {
-    epics.flatMap(epic => extractChildIssues(epic).flatMap(issue => extractSubTasks(issue)))
-  }
-
-  private def filterLogOutput(result: String, filter: (String) => Boolean): List[String] = {
+  def filterLogOutput(result: String, filter: (String) => Boolean): List[String] =
     result.split("\n").filter(filter).toList
-  }
 
-  private def listChangedFiles(issues: Seq[String]) =
+  def listChangedFilesCmd(issues: Seq[String]) =
     Seq("git", "log", "--no-merges", "--name-only", "--oneline") ++ issues.map(issue => s"--grep=$issue")
 
-  private def listChangedLines(issues: Seq[String]) =
+  def listChangedLinesCmd(issues: Seq[String]) =
     Seq("git", "log", "--no-merges", "--full-diff", "-p", "--no-renames") ++ issues.map(issue => s"--grep=$issue")
 }

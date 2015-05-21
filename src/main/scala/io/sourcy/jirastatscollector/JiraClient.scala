@@ -22,6 +22,11 @@ import net.liftweb.json._
 import scala.io.Source
 
 object JiraClient {
+
+  def extractAllIssues(epics: Seq[String]): Seq[String] = {
+    epics.flatMap(epic => extractChildIssues(epic).flatMap(issue => extractSubTasks(issue)))
+  }
+
   private def runJql(jql: String): JValue = {
     HttpsURLConnection.setDefaultSSLSocketFactory(NoSsl.socketFactory)
     HttpsURLConnection.setDefaultHostnameVerifier(NoSsl.hostVerifier)
@@ -30,12 +35,12 @@ object JiraClient {
     parse(Source.fromInputStream(connection.getInputStream).mkString)
   }
 
-  def extractChildIssues(epic: String): List[String] = {
+  private def extractChildIssues(epic: String): List[String] = {
     val values = (runJql(Settings.epicCustomField + "=%s".format(epic)) \ "issues" \ "key").values
     epic :: values.asInstanceOf[List[(String, String)]].map(tuple => tuple._2)
   }
 
-  def extractSubTasks(issue: String): List[String] = {
+  private def extractSubTasks(issue: String): List[String] = {
     val values = (runJql("parent=%s".format(issue)) \ "issues" \ "key").values
     var ret: List[String] = List()
     try {
