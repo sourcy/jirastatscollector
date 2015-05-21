@@ -15,3 +15,12 @@ cd ../../../../../..
 sbt run
 ```
 
+#### Example output 
+```
+scanning 3 epics...log output..changed files..commits..diff output..changed lines..done.
+
+issues:           53
+commits pushed:   266
+files changed:    2178
+lines changed:    323819
+```
