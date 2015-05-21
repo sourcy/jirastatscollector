@@ -12,7 +12,7 @@
 
 jira_user=some user
 jira_password=some password
-jira_url=https://jira.yourcompany.com/rest/api/latest/search?jql=cf[10006]=%s
+jira_url=https://jira.yourcompany.com/rest/api/latest/search?
 git_repository=/home/user/development/repo
 epics=ISSUE-123
 epic_custom_field=cf[10147]
