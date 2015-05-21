@@ -21,7 +21,7 @@ object Settings {
 
   def loadProps: Map[String, String] = {
     val props = new Properties()
-    props.load(getClass.getResourceAsStream("application.properties"))
+    props.load(getClass.getResourceAsStream("/application.properties"))
     import scala.collection.JavaConverters._
     Map() ++ props.asScala
   }

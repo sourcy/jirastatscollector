@@ -8,10 +8,10 @@ those issues and print out some statistics.
 #### Configure and run
 
 ```bash
-cd src/main/resources/io/sourcy/jirastatscollector
+cd src/main/resources
 cp application.properties.example application.properties
 vim application.properties
-cd ../../../../../..
+cd ../../..
 sbt run
 ```
 
