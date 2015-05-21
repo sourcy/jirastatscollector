@@ -21,7 +21,7 @@ import scala.sys.process.Process
 object Main extends App {
   print(s"\nscanning ${Settings.epics.size} epics...")
 
-  private val allIssues = extractAllIssues()
+  private val allIssues = extractAllIssues(Settings.epics)
   print("log output..")
   private val gitLogOutput = Process(listChangedFiles(allIssues), new File(Settings.gitRepository)).!!
   print("changed files..")
@@ -41,8 +41,8 @@ object Main extends App {
   println(s"lines changed:    ${changedLines.size}")
 
 
-  private def extractAllIssues(): Seq[String] = {
-    Settings.epics.flatMap(epic => extractChildIssues(epic).flatMap(issue => extractSubTasks(issue)))
+  private def extractAllIssues(epics: Seq[String]): Seq[String] = {
+    epics.flatMap(epic => extractChildIssues(epic).flatMap(issue => extractSubTasks(issue)))
   }
 
   private def filterLogOutput(result: String, filter: (String) => Boolean): List[String] = {
@@ -54,5 +54,4 @@ object Main extends App {
 
   private def listChangedLines(issues: Seq[String]) =
     Seq("git", "log", "--no-merges", "--full-diff", "-p", "--no-renames") ++ issues.map(issue => s"--grep=$issue")
-
 }
