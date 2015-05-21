@@ -25,17 +25,26 @@ object Main extends App {
   HttpsURLConnection.setDefaultSSLSocketFactory(NoSsl.socketFactory)
   HttpsURLConnection.setDefaultHostnameVerifier(NoSsl.hostVerifier);
 
-  private val allIssues = extractAllIssues()
-  private val gitLogOutput: String = Process(listChangedFiles(allIssues), new File(Settings.gitRepository)).!!
-  private val changedFiles = filterLogOutput(gitLogOutput, line => !line.matches("^.{7} .*")).distinct
-  private val commits = filterLogOutput(gitLogOutput, line => line.matches("^.{7} .*"))
-  private val gitDiffOutput: String = Process(listChangedLines(allIssues), new File(Settings.gitRepository)).!!
-  private val changedLines = filterLogOutput(gitDiffOutput, line => line.matches("^[\\+\\-] .*"))
+  print(s"\nscanning ${Settings.epics.size} epics...")
 
-  println(s"${changedFiles.size} files changed.")
-  println(s"${changedLines.size} lines changed.")
-  println(s"${commits.size} commits pushed.")
-  println(s"${allIssues.size} issues.")
+  private val allIssues = extractAllIssues()
+  print("log output..")
+  private val gitLogOutput: String = Process(listChangedFiles(allIssues), new File(Settings.gitRepository)).!!
+  print("changed files..")
+  private val changedFiles = filterLogOutput(gitLogOutput, line => !line.matches("^.{7} .*")).distinct
+  print("commits..")
+  private val commits = filterLogOutput(gitLogOutput, line => line.matches("^.{7} .*"))
+  print("diff output..")
+  private val gitDiffOutput: String = Process(listChangedLines(allIssues), new File(Settings.gitRepository)).!!
+  print("changed lines..")
+  private val changedLines = filterLogOutput(gitDiffOutput, line => line.matches("^[\\+\\-] .*"))
+  println("done.")
+
+  println("")
+  println(s"issues:           ${allIssues.size}")
+  println(s"commits pushed:   ${commits.size}")
+  println(s"files changed:    ${changedFiles.size}")
+  println(s"lines changed:    ${changedLines.size}")
 
   private def extractChildIssues(epic: String): List[String] = {
     val connection = new URL(Settings.jiraUrl + "jql=" + Settings.epicCustomField + "=%s".format(epic)).openConnection
