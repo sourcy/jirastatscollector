@@ -22,23 +22,48 @@ import scala.io.Source
 import scala.sys.process.Process
 
 object Main extends App {
-  def extractChildIssues(epic: String): List[String] = {
-    HttpsURLConnection.setDefaultSSLSocketFactory(NoSsl.socketFactory)
-    HttpsURLConnection.setDefaultHostnameVerifier(NoSsl.hostVerifier);
+  HttpsURLConnection.setDefaultSSLSocketFactory(NoSsl.socketFactory)
+  HttpsURLConnection.setDefaultHostnameVerifier(NoSsl.hostVerifier);
 
-    val connection = new URL(Settings.jiraUrl.format(epic)).openConnection
+  private val allIssues = extractAllIssues()
+  private val gitLogOutput: String = Process(listChangedFiles(allIssues), new File(Settings.gitRepository)).!!
+  private val changedFiles = filterLogOutput(gitLogOutput, line => !line.matches("^.{7} .*")).distinct
+  private val commits = filterLogOutput(gitLogOutput, line => line.matches("^.{7} .*"))
+
+  println(s"${changedFiles.size} files changed in ${commits.size} commits, ${allIssues.size} issues.")
+
+  private def extractChildIssues(epic: String): List[String] = {
+    val connection = new URL(Settings.jiraUrl + "jql=" + Settings.epicCustomField + "=%s".format(epic)).openConnection
     connection.setRequestProperty(HttpBasicAuth.AUTHORIZATION, HttpBasicAuth.getHeader(Settings.jiraUser, Settings.jiraPassword))
     val jsonResult = parse(Source.fromInputStream(connection.getInputStream).mkString)
-    val issues = jsonResult \ "issues" \ "key"
-    issues.values.asInstanceOf[List[(String, String)]].map(tuple => tuple._2)
+    val issuesNode = jsonResult \ "issues" \ "key"
+    issuesNode.values.asInstanceOf[List[(String, String)]].map(tuple => tuple._2)
   }
 
-  def removeCommitLines(result: String): String = {
-    result.split("\n").filter(line => !line.matches("^.{7} .*")).mkString("\n")
+  private def extractSubTasks(issue: String): List[String] = {
+    val connection = new URL(Settings.jiraUrl + "jql=" + "parent=%s".format(issue)).openConnection
+    connection.setRequestProperty(HttpBasicAuth.AUTHORIZATION, HttpBasicAuth.getHeader(Settings.jiraUser, Settings.jiraPassword))
+    val jsonResult = parse(Source.fromInputStream(connection.getInputStream).mkString)
+    val issuesNode = jsonResult \ "issues" \ "key"
+    val values = issuesNode.values
+    var ret: List[String] = List()
+    try {
+      ret = values.asInstanceOf[List[(String, String)]].map(tuple => tuple._2)
+    } catch {
+      case e: ClassCastException =>
+    }
+    issue :: ret
   }
 
-  private val listChangedFiles = Seq("git", "log", "--no-merges", "--name-only", "--oneline") ++
-    Settings.epics.flatMap(epic => extractChildIssues(epic)).map(issue => s"--grep=$issue ")
+  def extractAllIssues(): Seq[String] = {
+    Settings.epics.flatMap(epic => extractChildIssues(epic).flatMap(issue => extractSubTasks(issue)))
+  }
 
-  println(removeCommitLines(Process(listChangedFiles, new File(Settings.gitRepository)).!!))
+  private def filterLogOutput(result: String, filter: (String) => Boolean): List[String] = {
+    result.split("\n").filter(filter).toList
+  }
+
+  private def listChangedFiles(issues: Seq[String]) =
+    Seq("git", "log", "--no-merges", "--name-only", "--oneline") ++ issues.map(issue => s"--grep=$issue")
+
 }

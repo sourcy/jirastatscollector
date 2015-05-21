@@ -15,6 +15,8 @@ package io.sourcy.jirastatscollector
 import java.util.Properties
 
 object Settings {
+
+
   private val props = loadProps
 
   def loadProps: Map[String, String] = {
@@ -33,6 +35,8 @@ object Settings {
   def gitRepository = props(Property.gitRepository)
 
   def epics = props(Property.epics).split(",").toSeq
+
+  def epicCustomField: String = props(Property.epicCustomField)
 }
 
 private object Property {
@@ -41,4 +45,5 @@ private object Property {
   val jiraUrl = "jira_url"
   val gitRepository = "git_repository"
   val epics = "epics"
+  val epicCustomField = "epic_custom_field"
 }
