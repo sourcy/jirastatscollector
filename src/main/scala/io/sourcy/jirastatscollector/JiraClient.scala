@@ -32,7 +32,7 @@ object JiraClient {
 
   def extractChildIssues(epic: String): List[String] = {
     val values = (runJql(Settings.epicCustomField + "=%s".format(epic)) \ "issues" \ "key").values
-    values.asInstanceOf[List[(String, String)]].map(tuple => tuple._2)
+    epic :: values.asInstanceOf[List[(String, String)]].map(tuple => tuple._2)
   }
 
   def extractSubTasks(issue: String): List[String] = {
