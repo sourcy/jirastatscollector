@@ -29,8 +29,13 @@ object Main extends App {
   private val gitLogOutput: String = Process(listChangedFiles(allIssues), new File(Settings.gitRepository)).!!
   private val changedFiles = filterLogOutput(gitLogOutput, line => !line.matches("^.{7} .*")).distinct
   private val commits = filterLogOutput(gitLogOutput, line => line.matches("^.{7} .*"))
+  private val gitDiffOutput: String = Process(listChangedLines(allIssues), new File(Settings.gitRepository)).!!
+  private val changedLines = filterLogOutput(gitDiffOutput, line => line.matches("^[\\+\\-] .*"))
 
-  println(s"${changedFiles.size} files changed in ${commits.size} commits, ${allIssues.size} issues.")
+  println(s"${changedFiles.size} files changed.")
+  println(s"${changedLines.size} lines changed.")
+  println(s"${commits.size} commits pushed.")
+  println(s"${allIssues.size} issues.")
 
   private def extractChildIssues(epic: String): List[String] = {
     val connection = new URL(Settings.jiraUrl + "jql=" + Settings.epicCustomField + "=%s".format(epic)).openConnection
@@ -65,5 +70,8 @@ object Main extends App {
 
   private def listChangedFiles(issues: Seq[String]) =
     Seq("git", "log", "--no-merges", "--name-only", "--oneline") ++ issues.map(issue => s"--grep=$issue")
+
+  private def listChangedLines(issues: Seq[String]) =
+    Seq("git", "log", "--no-merges", "--full-diff", "-p", "--no-renames") ++ issues.map(issue => s"--grep=$issue")
 
 }
