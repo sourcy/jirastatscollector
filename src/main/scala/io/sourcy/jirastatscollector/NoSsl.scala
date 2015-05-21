@@ -12,6 +12,7 @@
 
 package io.sourcy.jirastatscollector
 
+import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import javax.net.ssl._
 
@@ -28,8 +29,8 @@ object NoSsl {
   }
 
   def socketFactory: SSLSocketFactory = {
-    val sc = SSLContext.getInstance("SSL");
-    sc.init(null, trustAllCerts, new java.security.SecureRandom());
+    val sc = SSLContext.getInstance("SSL")
+    sc.init(null, trustAllCerts, new SecureRandom())
     sc.getSocketFactory
   }
 
