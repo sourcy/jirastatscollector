@@ -13,18 +13,12 @@
 package io.sourcy.jirastatscollector
 
 import java.io.File
-import java.net.URL
-import javax.net.ssl.HttpsURLConnection
 
-import net.liftweb.json._
+import io.sourcy.jirastatscollector.JiraClient.{extractChildIssues, extractSubTasks}
 
-import scala.io.Source
 import scala.sys.process.Process
 
 object Main extends App {
-  HttpsURLConnection.setDefaultSSLSocketFactory(NoSsl.socketFactory)
-  HttpsURLConnection.setDefaultHostnameVerifier(NoSsl.hostVerifier);
-
   print(s"\nscanning ${Settings.epics.size} epics...")
 
   private val allIssues = extractAllIssues()
@@ -48,30 +42,6 @@ object Main extends App {
 
 
   private def extractAllIssues(): Seq[String] = {
-
-    def extractChildIssues(epic: String): List[String] = {
-      val connection = new URL(Settings.jiraUrl + "jql=" + Settings.epicCustomField + "=%s".format(epic)).openConnection
-      connection.setRequestProperty(HttpBasicAuth.AUTHORIZATION, HttpBasicAuth.getHeader(Settings.jiraUser, Settings.jiraPassword))
-      val jsonResult = parse(Source.fromInputStream(connection.getInputStream).mkString)
-      val issuesNode = jsonResult \ "issues" \ "key"
-      issuesNode.values.asInstanceOf[List[(String, String)]].map(tuple => tuple._2)
-    }
-
-    def extractSubTasks(issue: String): List[String] = {
-      val connection = new URL(Settings.jiraUrl + "jql=" + "parent=%s".format(issue)).openConnection
-      connection.setRequestProperty(HttpBasicAuth.AUTHORIZATION, HttpBasicAuth.getHeader(Settings.jiraUser, Settings.jiraPassword))
-      val jsonResult = parse(Source.fromInputStream(connection.getInputStream).mkString)
-      val issuesNode = jsonResult \ "issues" \ "key"
-      val values = issuesNode.values
-      var ret: List[String] = List()
-      try {
-        ret = values.asInstanceOf[List[(String, String)]].map(tuple => tuple._2)
-      } catch {
-        case e: ClassCastException =>
-      }
-      issue :: ret
-    }
-
     Settings.epics.flatMap(epic => extractChildIssues(epic).flatMap(issue => extractSubTasks(issue)))
   }
 
