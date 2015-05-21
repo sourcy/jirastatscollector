@@ -29,13 +29,13 @@ object Main extends App {
 
   private val allIssues = extractAllIssues()
   print("log output..")
-  private val gitLogOutput: String = Process(listChangedFiles(allIssues), new File(Settings.gitRepository)).!!
+  private val gitLogOutput = Process(listChangedFiles(allIssues), new File(Settings.gitRepository)).!!
   print("changed files..")
   private val changedFiles = filterLogOutput(gitLogOutput, line => !line.matches("^.{7} .*")).distinct
   print("commits..")
   private val commits = filterLogOutput(gitLogOutput, line => line.matches("^.{7} .*"))
   print("diff output..")
-  private val gitDiffOutput: String = Process(listChangedLines(allIssues), new File(Settings.gitRepository)).!!
+  private val gitDiffOutput = Process(listChangedLines(allIssues), new File(Settings.gitRepository)).!!
   print("changed lines..")
   private val changedLines = filterLogOutput(gitDiffOutput, line => line.matches("^[\\+\\-] .*"))
   println("done.")
@@ -46,30 +46,32 @@ object Main extends App {
   println(s"files changed:    ${changedFiles.size}")
   println(s"lines changed:    ${changedLines.size}")
 
-  private def extractChildIssues(epic: String): List[String] = {
-    val connection = new URL(Settings.jiraUrl + "jql=" + Settings.epicCustomField + "=%s".format(epic)).openConnection
-    connection.setRequestProperty(HttpBasicAuth.AUTHORIZATION, HttpBasicAuth.getHeader(Settings.jiraUser, Settings.jiraPassword))
-    val jsonResult = parse(Source.fromInputStream(connection.getInputStream).mkString)
-    val issuesNode = jsonResult \ "issues" \ "key"
-    issuesNode.values.asInstanceOf[List[(String, String)]].map(tuple => tuple._2)
-  }
 
-  private def extractSubTasks(issue: String): List[String] = {
-    val connection = new URL(Settings.jiraUrl + "jql=" + "parent=%s".format(issue)).openConnection
-    connection.setRequestProperty(HttpBasicAuth.AUTHORIZATION, HttpBasicAuth.getHeader(Settings.jiraUser, Settings.jiraPassword))
-    val jsonResult = parse(Source.fromInputStream(connection.getInputStream).mkString)
-    val issuesNode = jsonResult \ "issues" \ "key"
-    val values = issuesNode.values
-    var ret: List[String] = List()
-    try {
-      ret = values.asInstanceOf[List[(String, String)]].map(tuple => tuple._2)
-    } catch {
-      case e: ClassCastException =>
+  private def extractAllIssues(): Seq[String] = {
+
+    def extractChildIssues(epic: String): List[String] = {
+      val connection = new URL(Settings.jiraUrl + "jql=" + Settings.epicCustomField + "=%s".format(epic)).openConnection
+      connection.setRequestProperty(HttpBasicAuth.AUTHORIZATION, HttpBasicAuth.getHeader(Settings.jiraUser, Settings.jiraPassword))
+      val jsonResult = parse(Source.fromInputStream(connection.getInputStream).mkString)
+      val issuesNode = jsonResult \ "issues" \ "key"
+      issuesNode.values.asInstanceOf[List[(String, String)]].map(tuple => tuple._2)
     }
-    issue :: ret
-  }
 
-  def extractAllIssues(): Seq[String] = {
+    def extractSubTasks(issue: String): List[String] = {
+      val connection = new URL(Settings.jiraUrl + "jql=" + "parent=%s".format(issue)).openConnection
+      connection.setRequestProperty(HttpBasicAuth.AUTHORIZATION, HttpBasicAuth.getHeader(Settings.jiraUser, Settings.jiraPassword))
+      val jsonResult = parse(Source.fromInputStream(connection.getInputStream).mkString)
+      val issuesNode = jsonResult \ "issues" \ "key"
+      val values = issuesNode.values
+      var ret: List[String] = List()
+      try {
+        ret = values.asInstanceOf[List[(String, String)]].map(tuple => tuple._2)
+      } catch {
+        case e: ClassCastException =>
+      }
+      issue :: ret
+    }
+
     Settings.epics.flatMap(epic => extractChildIssues(epic).flatMap(issue => extractSubTasks(issue)))
   }
 
