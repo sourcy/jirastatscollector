@@ -27,28 +27,35 @@ object JiraClient {
     epics.flatMap(epic => extractChildIssues(epic).flatMap(issue => extractSubTasks(issue)))
   }
 
-  private def runJql(jql: String): JValue = {
-    HttpsURLConnection.setDefaultSSLSocketFactory(NoSsl.socketFactory)
-    HttpsURLConnection.setDefaultHostnameVerifier(NoSsl.hostVerifier)
+  def runJql(jql: String): JValue = {
+    disableSslChecking()
     val connection = new URL(Settings.jiraUrl + "jql=%s".format(jql)).openConnection
     connection.setRequestProperty(HttpBasicAuth.AUTHORIZATION, HttpBasicAuth.getHeader(Settings.jiraUser, Settings.jiraPassword))
     parse(Source.fromInputStream(connection.getInputStream).mkString)
   }
 
-  private def extractChildIssues(epic: String): List[String] = {
-    val values = (runJql(Settings.epicCustomField + "=%s".format(epic)) \ "issues" \ "key").values
-    epic :: values.asInstanceOf[List[(String, String)]].map(tuple => tuple._2)
+  def extractChildIssues(epic: String): List[String] = {
+    epic :: extractIssuesFromJValue((runJql(Settings.epicCustomField + "=%s".format(epic)) \ "issues" \ "key").values)
   }
 
-  private def extractSubTasks(issue: String): List[String] = {
+  private def extractIssuesFromJValue(values: JsonAST.JValue#Values): List[String] = {
+    values.asInstanceOf[List[(String, String)]].map(tuple => tuple._2)
+  }
+
+  def extractSubTasks(issue: String): List[String] = {
     val values = (runJql("parent=%s".format(issue)) \ "issues" \ "key").values
     var ret: List[String] = List()
     try {
-      ret = values.asInstanceOf[List[(String, String)]].map(tuple => tuple._2)
+      ret = extractIssuesFromJValue(values)
     } catch {
       case e: ClassCastException =>
     }
     issue :: ret
+  }
+
+  def disableSslChecking(): Unit = {
+    HttpsURLConnection.setDefaultSSLSocketFactory(NoSsl.socketFactory)
+    HttpsURLConnection.setDefaultHostnameVerifier(NoSsl.hostVerifier)
   }
 }
 
