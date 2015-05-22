@@ -30,7 +30,7 @@ object JiraClient {
   private def runJql(jql: String): JValue = {
     HttpsURLConnection.setDefaultSSLSocketFactory(NoSsl.socketFactory)
     HttpsURLConnection.setDefaultHostnameVerifier(NoSsl.hostVerifier)
-    val connection = new URL(Settings.jiraUrl + "jql=" + jql).openConnection
+    val connection = new URL(Settings.jiraUrl + "jql=%s".format(jql)).openConnection
     connection.setRequestProperty(HttpBasicAuth.AUTHORIZATION, HttpBasicAuth.getHeader(Settings.jiraUser, Settings.jiraPassword))
     parse(Source.fromInputStream(connection.getInputStream).mkString)
   }
