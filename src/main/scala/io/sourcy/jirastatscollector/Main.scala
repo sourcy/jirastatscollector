@@ -19,7 +19,9 @@ import io.sourcy.jirastatscollector.JiraClient.extractAllIssues
 import scala.sys.process.Process
 
 object Main extends App {
-  print(s"\nscanning ${Settings.epics.size} epics...")
+
+  print(s"\ncalculating stats for issues ${Settings.epics.mkString(", ")}\n")
+  print(s"\nscanning ${Settings.epics.size} epics..")
 
   private val allIssues = extractAllIssues(Settings.epics)
   print("changed files..")
@@ -29,7 +31,10 @@ object Main extends App {
   private val commits = filterLogOutput(gitLogOutput, line => line.matches("^.{7} .*"))
   print("changed lines..")
   private val gitDiffOutput = Process(listChangedLinesCmd(allIssues), new File(Settings.gitRepository)).!!
-  private val changedLines = filterLogOutput(gitDiffOutput, line => line.matches("^[\\+\\-] .*"))
+  private val changedLines =
+    filterLogOutput(gitDiffOutput, line => line.matches("^[\\+\\-] .*"))
+      .map(str => str.replaceFirst("^[\\+\\-]\\s+", ""))
+      .distinct
   println("done.")
 
   println("")
@@ -39,7 +44,7 @@ object Main extends App {
   println(s"lines changed:    ${changedLines.size}")
 
   def filterLogOutput(result: String, filter: (String) => Boolean): List[String] =
-    result.split("\n").filter(filter).toList
+    result.split(System.lineSeparator).filter(filter).toList
 
   def listChangedFilesCmd(issues: Seq[String]) =
     Seq("git", "log", "--no-merges", "--name-only", "--oneline") ++ issues.map(issue => s"--grep=$issue")
