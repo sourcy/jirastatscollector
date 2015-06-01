@@ -23,24 +23,21 @@ import scala.io.Source
 
 object JiraClient {
 
-  def extractAllIssues(epics: Seq[String]): Seq[String] = {
+  def extractAllIssues(epics: Seq[String]): Seq[String] =
     epics.flatMap(epic => extractChildIssues(epic).flatMap(issue => extractSubTasks(issue)))
-  }
 
   def runJql(jql: String): JValue = {
-    disableSslChecking()
+    NoSsl.disableSslChecking()
     val connection = new URL(Settings.jiraUrl + "jql=%s".format(jql)).openConnection
     connection.setRequestProperty(HttpBasicAuth.AUTHORIZATION, HttpBasicAuth.getHeader(Settings.jiraUser, Settings.jiraPassword))
     parse(Source.fromInputStream(connection.getInputStream).mkString)
   }
 
-  def extractChildIssues(epic: String): List[String] = {
+  def extractChildIssues(epic: String): List[String] =
     epic :: extractIssuesFromJValue((runJql(Settings.epicCustomField + "=%s".format(epic)) \ "issues" \ "key").values)
-  }
 
-  private def extractIssuesFromJValue(values: JsonAST.JValue#Values): List[String] = {
+  def extractIssuesFromJValue(values: JsonAST.JValue#Values): List[String] =
     values.asInstanceOf[List[(String, String)]].map(tuple => tuple._2)
-  }
 
   def extractSubTasks(issue: String): List[String] = {
     val values = (runJql("parent=%s".format(issue)) \ "issues" \ "key").values
@@ -52,14 +49,14 @@ object JiraClient {
     }
     issue :: ret
   }
+}
 
+private object NoSsl {
   def disableSslChecking(): Unit = {
     HttpsURLConnection.setDefaultSSLSocketFactory(NoSsl.socketFactory)
     HttpsURLConnection.setDefaultHostnameVerifier(NoSsl.hostVerifier)
   }
-}
 
-private object NoSsl {
   private def trustAllCerts = Array[TrustManager] {
     new X509TrustManager() {
       override def getAcceptedIssuers: Array[X509Certificate] = null
