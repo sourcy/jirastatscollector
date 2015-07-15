@@ -43,6 +43,8 @@ object Main extends App {
   println(s"files changed:    ${changedFiles.size}")
   println(s"lines changed:    ${changedLines.size}")
 
+  println(s"\nStats generated with JiraGitStatsCollector: https://github.com/sourcy/jirastatscollector")
+
   def filterLogOutput(result: String, filter: (String) => Boolean): List[String] =
     result.split(System.lineSeparator).filter(filter).toList
 
