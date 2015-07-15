@@ -31,17 +31,20 @@ object Main extends App {
   private val commits = filterLogOutput(gitLogOutput, line => line.matches("^.{7} .*"))
   print("changed lines..")
   private val gitDiffOutput = Process(listChangedLinesCmd(allIssues), new File(Settings.gitRepository)).!!
-  private val changedLines =
-    filterLogOutput(gitDiffOutput, line => line.matches("^[\\+\\-] .*"))
-      .map(str => str.replaceFirst("^[\\+\\-]\\s+", ""))
-      .distinct
+  private val changedLines = filterLogOutput(gitDiffOutput, _.matches("^[\\+\\-] .*"))
+    .map(str => str.replaceFirst("^[\\+\\-]\\s+", ""))
+    .distinct
+  print("added vs removed..")
+  private val addedRemoved = parseAddedRemoved(Process(listAddedRemovedCommand(allIssues), new File(Settings.gitRepository)).!!)
+  private val netChange = addedRemoved._1 - addedRemoved._2
   println("done.")
 
   println("")
-  println(s"issues:           ${allIssues.size}")
-  println(s"commits pushed:   ${commits.size}")
-  println(s"files changed:    ${changedFiles.size}")
-  println(s"lines changed:    ${changedLines.size}")
+  println(s"issues:                ${pad(allIssues.size)}")
+  println(s"commits pushed:        ${pad(commits.size)}")
+  println(s"files changed:         ${pad(changedFiles.size)}")
+  println(s"change of lines +/-:   ${pad(netChange)}")
+  println(s"lines changed:         ${pad(changedLines.size)}")
 
   println(s"\nStats generated with JiraGitStatsCollector: https://github.com/sourcy/jirastatscollector")
 
@@ -53,4 +56,19 @@ object Main extends App {
 
   def listChangedLinesCmd(issues: Seq[String]) =
     Seq("git", "log", "--no-merges", "--full-diff", "-p", "--no-renames") ++ issues.map(issue => s"--grep=$issue")
+
+  def listAddedRemovedCommand(issues: Seq[String]) =
+    Seq("git", "log", "--numstat", "--pretty=\"%H\"") ++ issues.map(issue => s"--grep=$issue")
+
+  def parseAddedRemoved(result: String): (Int, Int) = {
+    val regex = """([0-9]+)""".r
+    filterLogOutput(result, _.matches("[0-9]+\\s+[0-9]+\\s.+"))
+      .map(regex.findAllIn(_))
+      .map(it => (it.next().toInt, it.next().toInt))
+      .unzip match {
+      case (added, deleted) => (added.sum, deleted.sum)
+    }
+  }
+
+  def pad(number: Int) = number.toString.reverse.padTo(10, " ").reverse.mkString
 }
