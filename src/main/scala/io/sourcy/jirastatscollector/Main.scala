@@ -20,33 +20,33 @@ import scala.sys.process.Process
 
 object Main extends App {
 
-  print(s"\ncalculating stats for issues ${Settings.epics.mkString(", ")}\n")
-  print(s"\nscanning ${Settings.epics.size} epics..")
+  println(generateStats(Settings.epics))
+  Settings.epics.foreach(epic => println(generateStats(Seq(epic))))
+  println(s"\nStats generated with JiraGitStatsCollector: https://github.com/sourcy/jirastatscollector\n")
 
-  private val allIssues = extractAllIssues(Settings.epics)
-  print("changed files..")
-  private val gitLogOutput = Process(listChangedFilesCmd(allIssues), new File(Settings.gitRepository)).!!
-  private val changedFiles = filterLogOutput(gitLogOutput, line => !line.matches("^.{7} .*")).distinct
-  print("commits..")
-  private val commits = filterLogOutput(gitLogOutput, line => line.matches("^.{7} .*"))
-  print("changed lines..")
-  private val gitDiffOutput = Process(listChangedLinesCmd(allIssues), new File(Settings.gitRepository)).!!
-  private val changedLines = filterLogOutput(gitDiffOutput, _.matches("^[\\+\\-] .*"))
-    .map(str => str.replaceFirst("^[\\+\\-]\\s+", ""))
-    .distinct
-  print("added vs removed..")
-  private val addedRemoved = parseAddedRemoved(Process(listAddedRemovedCommand(allIssues), new File(Settings.gitRepository)).!!)
-  private val netChange = addedRemoved._1 - addedRemoved._2
-  println("done.")
+  def generateStats(epics: Seq[String]): String = {
+    def pad(number: Int) = number.toString.reverse.padTo(10, " ").reverse.mkString
+    val output = new StringBuilder
+    output.append(s"\nstats for issues ${epics.mkString(", ")}\n")
+    val allIssues = extractAllIssues(epics)
+    val gitLogOutput = Process(listChangedFilesCmd(allIssues), new File(Settings.gitRepository)).!!
+    val changedFiles = filterLogOutput(gitLogOutput, line => !line.matches("^.{7} .*")).distinct
+    val commits = filterLogOutput(gitLogOutput, line => line.matches("^.{7} .*"))
+    val gitDiffOutput = Process(listChangedLinesCmd(allIssues), new File(Settings.gitRepository)).!!
+    val changedLines = filterLogOutput(gitDiffOutput, _.matches("^[\\+\\-] .*"))
+      .map(str => str.replaceFirst("^[\\+\\-]\\s+", ""))
+      .distinct
+    val addedRemoved = parseAddedRemoved(Process(listAddedRemovedCommand(allIssues), new File(Settings.gitRepository)).!!)
+    val netChange = addedRemoved._1 - addedRemoved._2
 
-  println("")
-  println(s"issues:                ${pad(allIssues.size)}")
-  println(s"commits pushed:        ${pad(commits.size)}")
-  println(s"files changed:         ${pad(changedFiles.size)}")
-  println(s"change of lines +/-:   ${pad(netChange)}")
-  println(s"lines changed:         ${pad(changedLines.size)}")
-
-  println(s"\nStats generated with JiraGitStatsCollector: https://github.com/sourcy/jirastatscollector")
+    output.append("\n")
+    output.append(s"issues:                ${pad(allIssues.size)}\n")
+    output.append(s"commits pushed:        ${pad(commits.size)}\n")
+    output.append(s"files changed:         ${pad(changedFiles.size)}\n")
+    output.append(s"change of lines +/-:   ${pad(netChange)}\n")
+    output.append(s"lines changed:         ${pad(changedLines.size)}\n")
+    output.toString()
+  }
 
   def filterLogOutput(result: String, filter: (String) => Boolean): List[String] =
     result.split(System.lineSeparator).filter(filter).toList
@@ -69,6 +69,4 @@ object Main extends App {
       case (added, deleted) => (added.sum, deleted.sum)
     }
   }
-
-  def pad(number: Int) = number.toString.reverse.padTo(10, " ").reverse.mkString
 }
