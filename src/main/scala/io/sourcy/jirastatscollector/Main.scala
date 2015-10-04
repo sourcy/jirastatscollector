@@ -26,8 +26,6 @@ object Main extends App {
 
   def generateStats(epics: Seq[String]): String = {
     def pad(number: Int) = number.toString.reverse.padTo(10, " ").reverse.mkString
-    val output = new StringBuilder
-    output.append(s"\nstats for issues ${epics.mkString(", ")}\n")
     val allIssues = extractAllIssues(epics)
     val gitLogOutput = Process(listChangedFilesCmd(allIssues), new File(Settings.gitRepository)).!!
     val changedFiles = filterLogOutput(gitLogOutput, line => !line.matches("^.{7} .*")).distinct
@@ -39,6 +37,8 @@ object Main extends App {
     val addedRemoved = parseAddedRemoved(Process(listAddedRemovedCommand(allIssues), new File(Settings.gitRepository)).!!)
     val netChange = addedRemoved._1 - addedRemoved._2
 
+    val output = new StringBuilder
+    output.append(s"\nstats for issues ${epics.mkString(", ")}\n")
     output.append("\n")
     output.append(s"issues:                ${pad(allIssues.size)}\n")
     output.append(s"commits pushed:        ${pad(commits.size)}\n")

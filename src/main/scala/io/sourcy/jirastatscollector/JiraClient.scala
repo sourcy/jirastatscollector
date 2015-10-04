@@ -26,20 +26,20 @@ object JiraClient {
   def extractAllIssues(epics: Seq[String]): Seq[String] =
     epics.flatMap(epic => extractChildIssues(epic).flatMap(issue => extractSubTasks(issue)))
 
-  def runJql(jql: String): JValue = {
+  private def runJql(jql: String): JValue = {
     NoSsl.disableSslChecking()
     val connection = new URL(Settings.jiraUrl + "jql=%s".format(jql)).openConnection
     connection.setRequestProperty(HttpBasicAuth.AUTHORIZATION, HttpBasicAuth.getHeader(Settings.jiraUser, Settings.jiraPassword))
     parse(Source.fromInputStream(connection.getInputStream).mkString)
   }
 
-  def extractChildIssues(epic: String): List[String] =
+  private def extractChildIssues(epic: String): List[String] =
     epic :: extractIssuesFromJValue((runJql(Settings.epicCustomField + "=%s".format(epic)) \ "issues" \ "key").values)
 
-  def extractIssuesFromJValue(values: JsonAST.JValue#Values): List[String] =
+  private def extractIssuesFromJValue(values: JsonAST.JValue#Values): List[String] =
     values.asInstanceOf[List[(String, String)]].map(tuple => tuple._2)
 
-  def extractSubTasks(issue: String): List[String] = {
+  private def extractSubTasks(issue: String): List[String] = {
     val values = (runJql("parent=%s".format(issue)) \ "issues" \ "key").values
     var ret: List[String] = List()
     try {
